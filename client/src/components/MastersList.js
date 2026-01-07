@@ -1,33 +1,48 @@
 import React from 'react';
 import { deleteMaster } from '../api';
 
-export default function MastersList({ masters, onSelect, onDeleted }) {
-  async function del(id) {
-    if (!confirm('Удалить мастера?')) return;
-    await deleteMaster(id);
-    if (onDeleted) onDeleted();
+export default function MastersList({ masters = [], onSelect, onDeleted }) {
+
+  async function handleDelete(id) {
+    if (!window.confirm('Удалить мастера?')) return;
+    try {
+      await deleteMaster(id);
+      if (onDeleted) onDeleted();
+    } catch (err) {
+      console.error(err);
+      alert('Ошибка удаления мастера');
+    }
   }
 
   return (
-    <div className="masters-card card">
-      <div className="card-head">Мастера <span className="muted">({masters.length})</span></div>
+    <div className="masters-card card" style={{ position: 'relative' }}>
+      <div className="card-head">
+        <div>Мастера</div>
+        <div className="muted" style={{ fontSize: 13 }}>{masters.length}</div>
+      </div>
+
       <ul className="masters-list">
+        {masters.length === 0 && <li className="empty">Мастера не найдены</li>}
+
         {masters.map(m => (
           <li key={m._id} className="master-item">
-            <div className="master-info">
-              <div className="avatar" aria-hidden>{m.fio.split(' ').map(n=>n[0]).slice(0,2).join('')}</div>
-              <div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
+              <div className="avatar" aria-hidden>
+                {String(m.fio || '–').split(' ').map(n => n[0]).slice(0,2).join('')}
+              </div>
+
+              <div className="master-meta">
                 <div className="fio">{m.fio}</div>
-                <div className="mono id">{m._id}</div>
+                <div className="id mono">{m._id}</div>
               </div>
             </div>
+
             <div className="master-actions">
-              <button className="btn" onClick={() => onSelect(m)}>Открыть</button>
-              <button className="btn danger" onClick={() => del(m._id)}>Удалить</button>
+              <button className="btn open" onClick={() => onSelect && onSelect(m)}>Открыть</button>
+              <button className="btn delete" onClick={() => handleDelete(m._id)}>Удалить</button>
             </div>
           </li>
         ))}
-        {masters.length === 0 && <li className="empty">Мастера не найдены</li>}
       </ul>
     </div>
   );

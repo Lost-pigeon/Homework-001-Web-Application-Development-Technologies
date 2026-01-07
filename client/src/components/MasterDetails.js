@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { getTasksForMaster, createTaskForMaster, deleteTask, updateTask } from '../api';
+import { getTasksForMaster, createTaskForMaster, deleteTask, updateTask, updateMaster } from '../api';
 import TaskForm from './TaskForm';
 
 export default function MasterDetails({ master, onChange, config }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // local editable fio value
+  const [editing, setEditing] = useState(false);
+  const [fioValue, setFioValue] = useState(master?.fio || '');
+
+  useEffect(() => {
+    setFioValue(master?.fio || '');
+    loadTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [master]);
 
   async function loadTasks() {
     setLoading(true);
@@ -12,8 +22,6 @@ export default function MasterDetails({ master, onChange, config }) {
     setTasks(t || []);
     setLoading(false);
   }
-
-  useEffect(() => { loadTasks(); }, [master]);
 
   function sumComplexity() { return tasks.reduce((s, t) => s + t.complexity, 0); }
 
@@ -35,16 +43,60 @@ export default function MasterDetails({ master, onChange, config }) {
     await loadTasks(); if (onChange) onChange();
   }
 
+  async function saveFio() {
+    const newFio = fioValue?.trim();
+    if (!newFio) return alert('ФИО не может быть пустым');
+    // call API
+    const res = await updateMaster(master._id, newFio);
+    if (res && res.error) {
+      alert(res.message || 'Ошибка при обновлении мастера');
+      return;
+    }
+    // success: stop editing, notify parent to reload lists
+    setEditing(false);
+    if (onChange) onChange();
+  }
+
+  function cancelEdit() {
+    setFioValue(master.fio);
+    setEditing(false);
+  }
+
   return (
     <div className="details-root">
       <div className="details-header card">
         <div>
-          <h2 className="fio-large">{master.fio}</h2>
-          <div className="mono id">ID: {master._id}</div>
+          {editing ? (
+            <>
+              <input
+                value={fioValue}
+                onChange={e => setFioValue(e.target.value)}
+                style={{ fontSize: 22, fontWeight: 700, padding: '6px 8px', borderRadius: 8, border: '1px solid #e6eef7' }}
+              />
+              <div className="mono id" style={{ marginTop: 6 }}>ID: {master._id}</div>
+            </>
+          ) : (
+            <>
+              <h2 className="fio-large">{master.fio}</h2>
+              <div className="mono id">ID: {master._id}</div>
+            </>
+          )}
         </div>
-        <div className="load">
-          <div className="label">Нагрузка</div>
-          <div className="badge">{sumComplexity()} / {config.complexityLimit}</div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="load">
+            <div className="label">Нагрузка</div>
+            <div className="badge">{sumComplexity()} / {config.complexityLimit}</div>
+          </div>
+
+          {editing ? (
+            <>
+              <button className="btn primary" onClick={saveFio}>Сохранить</button>
+              <button className="btn" onClick={cancelEdit}>Отмена</button>
+            </>
+          ) : (
+            <button className="btn" onClick={() => setEditing(true)}>Ред.</button>
+          )}
         </div>
       </div>
 
